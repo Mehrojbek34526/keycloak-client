@@ -8,10 +8,17 @@ import org.keycloak.OAuth2Constants;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.KeycloakBuilder;
 import org.keycloak.representations.AccessTokenResponse;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.Base64;
 
@@ -48,8 +55,24 @@ public class AuthController {
     }
 
     @GetMapping("/refresh-token")
-    public AccessTokenResponse refresh(String refreshToken) {
-        return null;
+    public AccessTokenResponse refresh(@RequestParam String refreshToken) {
+        String url = "http://localhost:7000/realms/%s/protocol/openid-connect/token".formatted(realm);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+        body.add("client_id", clientId);
+        body.add("client_secret", clientSecret); // public client bo‘lsa shart emas
+        body.add("grant_type", "refresh_token");
+        body.add("refresh_token", refreshToken);
+
+        HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
+
+        ResponseEntity<AccessTokenResponse> response = new RestTemplate()
+                .postForEntity(url, request, AccessTokenResponse.class);
+
+        return response.getBody();
     }
 
     public static Keycloak getKeycloak(AuthPropsDTO authProps) {
